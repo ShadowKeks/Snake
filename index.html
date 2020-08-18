@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Zmiuga</title>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+<script>
+	const cnv = document.getElementById('canvas');
+	const ctx = cnv.getContext('2d');
+
+	cnv.width = 1000;
+	cnv.height = 500;
+
+    canvas.style.backgroundColor = 'lightgreen';
+    canvas.style.border = "2px solid red"
+
+	ctx.font = '48px monospace';
+	let isGameOver = false;
+
+	let keys = {}
+
+	document.addEventListener('keydown', (event) => {
+		keys[event.code] = true;
+	})
+
+	document.addEventListener('keyup', (event) => {
+		keys[event.code] = false;
+	})
+	const randomXY = function(border) {
+		return parseInt(Math.random() * (border - 20) + 10 );
+	}
+	ctx.fillStyle = 'red'
+
+	const barrier = {
+		x:randomXY(cnv.width),
+		y:randomXY(cnv.height),
+		width: 50,
+		height: 50,
+		barriers: [],
+		crash: function(player) {
+			for(let i = 0; i < this.barriers.length; i++){
+				if (collides(player, this.barriers[i])) {
+					isGameOver = true;
+				}
+			}
+		},
+		create: function() {
+			for(let i = 0; i < 10; i++) {
+				this.x = randomXY(cnv.width);
+				this.y = randomXY(cnv.height);
+				this.barriers.unshift({x: this.x,
+								   y: this.y,
+								   width: this.width,
+								   height: this.height})
+		}
+		},
+		Barrier: function() {
+			ctx.fillStyle = 'blue';
+			for(let i = 0; i < this.barriers.length; i++) {
+			ctx.fillRect(this.barriers[i].x,
+			this.barriers[i].y, 
+			this.barriers[i].width, 
+			this.barriers[i].height,
+			)
+		}
+	}
+	}
+	barrier.create()
+	const gameOver = () => {
+		ctx.fillStyle = '#eeeeee';
+		ctx.fillRect(0, 0, cnv.width, cnv.height);
+
+		ctx.fillStyle = '#000000';
+		ctx.fillRect(cnv.width / 2 - 150,
+					cnv.height / 2 - 50,
+					300,
+					100)
+		ctx.fillStyle = 'red'
+		ctx.fillText('Game Over', 378, 270)
+	}
+
+	const collides = (a, b) => {
+		return a.x < b.x + b.width
+		&& a.x + a.width > b.x
+		&& a. y < b.y + b.height
+		&& a.y + a.height > b.y
+	}
+	const apple = {
+		x: randomXY(cnv.width),
+		y: randomXY(cnv.height),
+		width: 7.5,
+		height: 7.5,
+		radius: 5,
+		collect: function(player) {
+			if(collides(player, apple)) {
+				this.x = randomXY(cnv.width);
+				this.y = randomXY(cnv.height);
+				player.score++;
+				player.length++;
+			}
+			ctx.fillStyle = 'red';
+			ctx.beginPath();
+			ctx.arc(this.x, this.y, this.radius, 0, Math.PI *2)
+			ctx.fill();
+		},
+		respawnApple: function() {
+			for(let i = 0; i < barrier.barriers.length; i++) {
+				if(collides(barrier.barriers[i], apple)) {
+					this.x = randomXY(cnv.width);
+					this.y = randomXY(cnv.height);
+					ctx.fillStyle = 'red';
+					ctx.beginPath();
+					ctx.arc(this.x, this.y, this.radius, 0, Math.PI *2)
+					ctx.fill();
+				}
+			}
+		},
+	}
+	const player = {
+		x: 0,
+		y: 0,
+		width: 20,
+		height: 20,
+		speed: 1,
+		dx: 20,
+		dy: 0,
+		score: 0,
+		segments: [],
+		length: 4,
+		extraLife: 0,
+		extraLifeFunc: function() {
+
+		},
+		hardMode: function(enter) {
+				if(enter == 'Y' || enter == 'y') {
+				if(player.x == cnv.width || player.y == cnv.height || player.x < 0 || player.y < 0) {
+				isGameOver = true;
+				}
+			}
+		},
+		normalMode: function (enter) {
+			if (enter == 'N' || enter == 'n') {
+				if(player.x == cnv.width) {
+						player.x = 0;
+					}
+					else if(player.x < 0) {
+						player.x = cnv.width;
+					}
+					else if(player.y == cnv.height) {
+						player.y = 0;
+					}
+					else if(player.y < 0) {
+						player.y = cnv.height;
+					}
+			}
+		},
+		move: function() {
+			if(keys['KeyW']) {
+				this.dx = 0;
+				this.dy = -20;
+			};
+			if(keys['KeyS']) {
+				this.dx = 0;
+				this.dy = 20;
+			};
+			if(keys['KeyD']){
+				this.dx = 20;
+				this.dy = 0;
+			};
+			if(keys['KeyA']) {
+				this.dx = -20;
+				this.dy = 0;
+			};
+			this.x += this.dx;
+			this.y += this.dy;
+
+			this.segments.unshift({x: this.x,
+								   y: this.y,
+								   width: this.width,
+								   height: this.height});
+			if(this.segments.length > this.length) {
+				this.segments.pop();
+			}
+			ctx.fillStyle = 'red';
+			ctx.fillText('Score:' + this.score, 20, 50);
+			ctx.fillStyle = 'green'
+			for(let i = 1; i < this.segments.length; i++) {
+				ctx.fillRect(this.segments[i].x,
+							 this.segments[i].y, 
+							 this.segments[i].width - 1, 
+							 this.segments[i].height - 1,
+							 )
+				if(collides(this.segments[i], player) && !isGameOver){
+					isGameOver = true;
+				}
+			}
+		}
+	}
+	let isHardMode = prompt("Сложный режим или обычный?(Y/N)");
+	let frame = 0;
+	const mainLoop = () => {
+			requestAnimationFrame(mainLoop);
+			if (isGameOver == false) {
+				frame += 1;
+				if(frame < 9) return;
+				frame = 0;
+				ctx.clearRect(0, 0, cnv.width, cnv.height);
+				player.move();
+				player.hardMode(isHardMode);
+				player.normalMode(isHardMode);
+				apple.collect(player);
+				apple.respawnApple()
+				barrier.Barrier()
+				barrier.crash(player);
+			}
+		else {
+			gameOver();
+		}
+	}
+	requestAnimationFrame(mainLoop)
+</script>
+<style>
+</style>
+</html>
